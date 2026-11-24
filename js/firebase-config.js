@@ -12,7 +12,7 @@ const firebaseConfig = {
   measurementId: "G-94PQD067P8"
 };
 
-export const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/ocoqfbg8/image/upload";
+export const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/ocoqfbg6/image/upload";
 export const CLOUDINARY_PRESET = "boxing_avatar";
 
 const app = initializeApp(firebaseConfig);
