@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản Trị Hệ Thống | Vườn Hoa Boxing Clup</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="container" style="max-width: 900px;">
+    <h1 class="page-title">BẢNG ĐIỀU KHIỂN ADMIN CLB</h1>
+    
+    <!-- Khung đăng nhập -->
+    <div id="loginBox" class="card" style="max-width: 420px; margin: 40px auto;">
+      <h3>ĐĂNG NHẬP QUẢN TRỊ VIÊN</h3>
+      <form id="loginForm">
+        <div class="form-group">
+          <label>Email Admin</label>
+          <input type="email" id="adminEmail" required>
+        </div>
+        <div class="form-group">
+          <label>Mật khẩu</label>
+          <input type="password" id="adminPass" required>
+        </div>
+        <button type="submit" class="btn" style="width: 100%;">Đăng Nhập</button>
+      </form>
+    </div>
+
+    <!-- Khu vực quản lý sau khi đăng nhập -->
+    <div id="adminPanel" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <a href="index.html" class="btn btn-outline">← Về Trang Chủ</a>
+        <button id="btnLogout" class="btn">Đăng Xuất</button>
+      </div>
+
+      <div class="card" style="margin-bottom: 24px;">
+        <h3>DUYỆT HỒ SƠ VÕ SĨ MỚI (CHỐNG SPAM / TÊN TRÊU CHỌC)</h3>
+        <div id="pendingFighters">Đang tải...</div>
+      </div>
+
+      <div class="card">
+        <h3>QUẢN LÝ DANH SÁCH SPARRING TUẦN NÀY</h3>
+        <div id="adminSparring">Đang tải...</div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { auth, db, sanitizeInput } from './js/firebase-config.js';
+    import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { collection, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const loginBox = document.getElementById('loginBox');
+    const adminPanel = document.getElementById('adminPanel');
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loginBox.style.display = 'none';
+        adminPanel.style.display = 'block';
+        loadAdminData();
+      } else {
+        loginBox.style.display = 'block';
+        adminPanel.style.display = 'none';
+      }
+    });
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await signInWithEmailAndPassword(auth, document.getElementById('adminEmail').value, document.getElementById('adminPass').value);
+      } catch (err) {
+        alert("Sai tài khoản hoặc mật khẩu Admin!");
+      }
+    });
+
+    document.getElementById('btnLogout').addEventListener('click', () => signOut(auth));
+
+    async function loadAdminData() {
+      // Load tất cả võ sĩ (cả đã duyệt và chưa duyệt)
+      const fSnap = await getDocs(collection(db, "fighters"));
+      const fList = document.getElementById('pendingFighters');
+      fList.innerHTML = "";
+      fSnap.forEach(d => {
+        const data = d.data();
+        const row = document.createElement('div');
+        row.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid var(--border); gap:10px; flex-wrap:wrap;";
+        row.innerHTML = `
+          <div>
+            <strong>${sanitizeInput(data.name)}</strong> (${data.weight}kg - ${data.height}cm) 
+            <span style="color:${data.approved ? '#10b981' : '#f59e0b'}">[${data.approved ? 'Đã hiển thị' : 'Chờ duyệt'}]</span>
+          </div>
+          <div>
+            ${!data.approved ? `<button class="btn" style="padding:6px 12px; font-size:0.85rem;" onclick="approveFighter('${d.id}')">Duyệt Hiện</button>` : ''}
+            <button class="btn btn-outline" style="padding:6px 12px; font-size:0.85rem;" onclick="deleteDocItem('fighters', '${d.id}')">Xóa</button>
+          </div>
+        `;
+        fList.appendChild(row);
+      });
+
+      // Load danh sách Sparring để reset sau mỗi tuần
+      const sSnap = await getDocs(collection(db, "sparring"));
+      const sList = document.getElementById('adminSparring');
+      sList.innerHTML = "";
+      sSnap.forEach(d => {
+        const data = d.data();
+        const row = document.createElement('div');
+        row.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid var(--border);";
+        row.innerHTML = `
+          <span>${sanitizeInput(data.name)} (${data.weight}kg) - ${sanitizeInput(data.gear)}</span>
+          <button class="btn btn-outline" style="padding:6px 12px; font-size:0.85rem;" onclick="deleteDocItem('sparring', '${d.id}')">Xóa</button>
+        `;
+        sList.appendChild(row);
+      });
+    }
+
+    window.approveFighter = async (id) => {
+      await updateDoc(doc(db, "fighters", id), { approved: true });
+      loadAdminData();
+    };
+
+    window.deleteDocItem = async (col, id) => {
+      if (confirm("Xóa mục này?")) {
+        await deleteDoc(doc(db, col, id));
+        loadAdminData();
+      }
+    };
+  </script>
+</body>
+</html>

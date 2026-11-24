@@ -1,0 +1,91 @@
+:root {
+  --bg-dark: #0d0d0f;
+  --bg-card: #16161a;
+  --primary: #e11d48; /* Đỏ Boxing */
+  --primary-hover: #be123c;
+  --gold: #f59e0b;
+  --text-main: #f3f4f6;
+  --text-muted: #9ca3af;
+  --border: #27272a;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+body { background-color: var(--bg-dark); color: var(--text-main); line-height: 1.6; }
+
+/* Thanh Menu Chuyên Nghiệp */
+header {
+  background: rgba(13, 13, 15, 0.95);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 1000;
+  backdrop-filter: blur(10px);
+}
+.nav-container {
+  max-width: 1150px; margin: 0 auto; padding: 14px 20px;
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;
+}
+.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: #fff; font-weight: 800; font-size: 1.25rem; letter-spacing: 0.5px; }
+.brand img { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--primary); object-fit: cover; }
+.brand span { color: var(--primary); }
+
+nav ul { list-style: none; display: flex; gap: 8px; flex-wrap: wrap; }
+nav a {
+  text-decoration: none; color: var(--text-muted); font-weight: 600; font-size: 0.95rem;
+  padding: 8px 14px; border-radius: 6px; transition: 0.2s;
+}
+nav a:hover, nav a.active { background: var(--primary); color: #fff; }
+
+/* Container & Card */
+.container { max-width: 1100px; margin: 35px auto; padding: 0 20px; }
+.page-title { font-size: 2rem; font-weight: 800; margin-bottom: 8px; border-left: 4px solid var(--primary); padding-left: 14px; }
+.page-sub { color: var(--text-muted); margin-bottom: 30px; }
+
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
+.grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+
+.card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+.card h3 { color: var(--gold); margin-bottom: 12px; font-size: 1.2rem; }
+
+/* Form & Inputs */
+.form-group { margin-bottom: 16px; }
+label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.9rem; color: #d1d5db; }
+input, select, textarea {
+  width: 100%; padding: 11px 14px; background: #09090b; border: 1px solid var(--border);
+  border-radius: 8px; color: #fff; font-size: 0.95rem;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); }
+
+.btn {
+  display: inline-block; background: var(--primary); color: #fff; border: none;
+  padding: 12px 22px; border-radius: 8px; font-weight: 700; cursor: pointer;
+  text-decoration: none; transition: 0.2s; text-align: center;
+}
+.btn:hover { background: var(--primary-hover); }
+.btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+.btn-outline:hover { background: var(--primary); color: #fff; }
+
+/* Fighter Card */
+.fighter-card { text-align: center; position: relative; overflow: hidden; }
+.fighter-avatar {
+  width: 110px; height: 110px; border-radius: 50%; object-fit: cover;
+  border: 3px solid var(--primary); margin-bottom: 14px;
+}
+.badge {
+  display: inline-block; background: rgba(225, 29, 72, 0.15); color: var(--primary);
+  padding: 4px 10px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; margin: 4px 2px;
+}
+
+/* Timeline Thứ 7 */
+.timeline-item { display: flex; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.time-tag { background: var(--primary); color: #fff; font-weight: 800; padding: 4px 12px; border-radius: 6px; height: fit-content; white-space: nowrap; }
+
+/* Chat Box */
+.chat-box { height: 420px; overflow-y: auto; background: #09090b; border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+.msg { margin-bottom: 12px; padding: 10px 14px; background: var(--bg-card); border-radius: 8px; border-left: 3px solid var(--gold); }
+.msg-header { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px; }
+.msg-sender { color: var(--gold); font-weight: 700; }
+
+/* Footer */
+footer { text-align: center; padding: 30px 20px; border-top: 1px solid var(--border); margin-top: 60px; color: var(--text-muted); font-size: 0.9rem; }

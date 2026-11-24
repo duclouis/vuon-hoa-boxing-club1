@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng Ký Sparring Thứ 7 | Vườn Hoa Boxing Clup</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <div class="nav-container">
+      <a href="index.html" class="brand"><img src="logo.png" alt="Logo"><div>VƯỜN HOA <span>BOXING CLUP</span></div></a>
+      <nav>
+        <ul>
+          <li><a href="index.html">Trang Chủ</a></li>
+          <li><a href="fighters.html">Võ Sĩ & Hồ Sơ</a></li>
+          <li><a href="sparring.html" class="active">Đăng Ký Sparring</a></li>
+          <li><a href="chat.html">Phòng Chat</a></li>
+          <li><a href="donate.html">Ủng Hộ Thiết Bị</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1 class="page-title">ĐĂNG KÝ SPARRING TỐI THỨ 7 (21:00 - 23:00)</h1>
+    <p class="page-sub">Đăng ký trước để CLB chuẩn bị đủ số lượng găng tay và mũ bảo hộ cho anh em.</p>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3>PHIẾU ĐĂNG KÝ THAM GIA</h3>
+        <form id="sparringForm">
+          <div class="form-group">
+            <label>Tên võ sĩ đăng ký *</label>
+            <input type="text" id="sName" maxlength="35" required placeholder="Nhập tên của bạn">
+          </div>
+          <div class="form-group">
+            <label>Hạng cân hiện tại (kg) *</label>
+            <input type="number" id="sWeight" min="40" max="130" required placeholder="VD: 67">
+          </div>
+          <div class="form-group">
+            <label>Nhu cầu mượn thiết bị của CLB *</label>
+            <select id="sGear">
+              <option value="Mượn cả Găng + Mũ bảo hộ">Mượn cả Găng + Mũ bảo hộ CLB</option>
+              <option value="Chỉ mượn Mũ bảo hộ (Đã có găng)">Chỉ mượn Mũ bảo hộ (Đã có găng)</option>
+              <option value="Chỉ mượn Găng (Đã có mũ)">Chỉ mượn Găng (Đã có mũ)</option>
+              <option value="Tự túc toàn bộ trang bị">Tự túc toàn bộ trang bị</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Cường độ mong muốn</label>
+            <select id="sLevel">
+              <option value="Người mới (Light Sparring - Đánh nhẹ chạm kỹ thuật)">Người mới (Light Sparring - Đánh nhẹ)</option>
+              <option value="Trung bình (Technical Sparring - Tốc độ vừa)">Trung bình (Technical Sparring)</option>
+              <option value="Nâng cao (Hard Sparring - Có kinh nghiệm)">Nâng cao (Có kinh nghiệm)</option>
+            </select>
+          </div>
+          <button type="submit" class="btn" style="width: 100%;">Xác Nhận Tham Gia Thứ 7 Này</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h3>DANH SÁCH ĐÃ CHỐT KÈO TUẦN NÀY</h3>
+        <div id="sparringList" style="display: flex; flex-direction: column; gap: 10px;">
+          <p style="color: var(--text-muted);">Đang tải danh sách...</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { db, sanitizeInput } from './js/firebase-config.js';
+    import { collection, addDoc, getDocs, orderBy, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const listEl = document.getElementById('sparringList');
+
+    async function loadSparring() {
+      const q = query(collection(db, "sparring"), orderBy("createdAt", "desc"));
+      const snap = await getDocs(q);
+      listEl.innerHTML = "";
+      if (snap.empty) {
+        listEl.innerHTML = "<p style='color:var(--text-muted)'>Chưa có ai đăng ký tuần này. Hãy là người đầu tiên!</p>";
+        return;
+      }
+      snap.forEach(doc => {
+        const d = doc.data();
+        const item = document.createElement('div');
+        item.style.cssText = "padding: 12px; background: #09090b; border: 1px solid var(--border); border-radius: 8px;";
+        item.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong style="color:#fff;">${sanitizeInput(d.name)}</strong>
+            <span class="badge">${Number(d.weight)} kg</span>
+          </div>
+          <div style="font-size:0.85rem; color:var(--gold); margin-top:4px;">Trang bị: ${sanitizeInput(d.gear)}</div>
+          <div style="font-size:0.82rem; color:var(--text-muted);">Mức độ: ${sanitizeInput(d.level)}</div>
+        `;
+        listEl.appendChild(item);
+      });
+    }
+
+    document.getElementById('sparringForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await addDoc(collection(db, "sparring"), {
+        name: sanitizeInput(document.getElementById('sName').value),
+        weight: Number(document.getElementById('sWeight').value),
+        gear: sanitizeInput(document.getElementById('sGear').value),
+        level: sanitizeInput(document.getElementById('sLevel').value),
+        createdAt: serverTimestamp()
+      });
+      e.target.reset();
+      loadSparring();
+      alert("Đăng ký Sparring thành công! Hẹn gặp bạn lúc 21:00 tối Thứ 7.");
+    });
+
+    loadSparring();
+  </script>
+</body>
+</html>

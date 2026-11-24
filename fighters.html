@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hồ Sơ Võ Sĩ | Vườn Hoa Boxing Clup</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <div class="nav-container">
+      <a href="index.html" class="brand"><img src="logo.png" alt="Logo"><div>VƯỜN HOA <span>BOXING CLUP</span></div></a>
+      <nav>
+        <ul>
+          <li><a href="index.html">Trang Chủ</a></li>
+          <li><a href="fighters.html" class="active">Võ Sĩ & Hồ Sơ</a></li>
+          <li><a href="sparring.html">Đăng Ký Sparring</a></li>
+          <li><a href="chat.html">Phòng Chat</a></li>
+          <li><a href="donate.html">Ủng Hộ Thiết Bị</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1 class="page-title">DANH SÁCH THÀNH VIÊN CLB</h1>
+    <p class="page-sub">Thông tin hạng cân và chiều cao giúp ban tổ chức ghép cặp Sparring cân bằng nhất.</p>
+
+    <div class="card" style="margin-bottom: 35px;">
+      <h3>ĐĂNG KÝ THẺ VÕ SĨ MỚI</h3>
+      <form id="fighterForm" class="grid-2">
+        <div>
+          <div class="form-group">
+            <label>Biệt danh / Họ tên (Tối đa 35 ký tự) *</label>
+            <input type="text" id="fName" maxlength="35" required placeholder="VD: Nguyễn Văn A">
+          </div>
+          <div class="form-group">
+            <label>Hạng cân (kg) *</label>
+            <input type="number" id="fWeight" min="40" max="130" required placeholder="VD: 68">
+          </div>
+          <div class="form-group">
+            <label>Chiều cao (cm) *</label>
+            <input type="number" id="fHeight" min="140" max="210" required placeholder="VD: 165">
+          </div>
+        </div>
+        <div>
+          <div class="form-group">
+            <label>Ảnh đại diện (JPG/PNG, tối đa 5MB) *</label>
+            <input type="file" id="fAvatar" accept="image/*" required>
+          </div>
+          <div class="form-group">
+            <label>Giới thiệu bản thân / Sở trường (Tối đa 200 ký tự)</label>
+            <textarea id="fBio" rows="3" maxlength="200" placeholder="VD: Thuận tay phải, thích đánh phản công, giao lưu vui vẻ..."></textarea>
+          </div>
+          <button type="submit" id="btnSubmitFighter" class="btn" style="width: 100%;">Gửi Hồ Sơ Chờ Duyệt</button>
+        </div>
+      </form>
+      <p id="formStatus" style="margin-top: 12px; font-weight: 600;"></p>
+    </div>
+
+    <div id="fightersList" class="grid-3">
+      <p style="color: var(--text-muted);">Đang tải danh sách võ sĩ...</p>
+    </div>
+  </main>
+
+  <script type="module">
+    import { db, CLOUDINARY_URL, CLOUDINARY_PRESET, sanitizeInput } from './js/firebase-config.js';
+    import { collection, addDoc, query, where, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const listEl = document.getElementById('fightersList');
+
+    // Chỉ tải các hồ sơ ĐÃ ĐƯỢC ADMIN DUYỆT (approved == true)
+    async function loadFighters() {
+      try {
+        const q = query(collection(db, "fighters"), where("approved", "==", true));
+        const snapshot = await getDocs(q);
+        listEl.innerHTML = "";
+        if (snapshot.empty) {
+          listEl.innerHTML = "<p>Chưa có võ sĩ nào được hiển thị.</p>";
+          return;
+        }
+        snapshot.forEach(doc => {
+          const d = doc.data();
+          const card = document.createElement('div');
+          card.className = "card fighter-card";
+          card.innerHTML = `
+            <img src="${d.avatar}" alt="Avatar" class="fighter-avatar">
+            <h3 style="color: #fff; margin-bottom: 6px;">${sanitizeInput(d.name)}</h3>
+            <div>
+              <span class="badge">${Number(d.weight)} kg</span>
+              <span class="badge">${Number(d.height)} cm</span>
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 12px;">${sanitizeInput(d.bio || 'Thành viên Vườn Hoa Boxing')}</p>
+          `;
+          listEl.appendChild(card);
+        });
+      } catch (err) {
+        listEl.innerHTML = "<p>Lỗi tải dữ liệu. Vui lòng thử lại.</p>";
+      }
+    }
+
+    // Xử lý Upload ảnh lên Cloudinary & Lưu Firestore
+    document.getElementById('fighterForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btnSubmitFighter');
+      const status = document.getElementById('formStatus');
+      const file = document.getElementById('fAvatar').files[0];
+
+      if (!file || file.size > 5 * 1024 * 1024) {
+        status.style.color = "#ef4444";
+        status.textContent = "Vui lòng chọn ảnh dưới 5MB!";
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Đang tải ảnh lên bảo mật...";
+
+      try {
+        // 1. Upload ảnh lên Cloudinary
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("upload_preset", CLOUDINARY_PRESET);
+
+        const res = await fetch(CLOUDINARY_URL, { method: "POST", body: formData });
+        const imgData = await res.json();
+        if (!imgData.secure_url) throw new Error("Upload ảnh thất bại");
+
+        // 2. Lưu thông tin vào Firestore (approved: false để Admin duyệt chống spam)
+        await addDoc(collection(db, "fighters"), {
+          name: sanitizeInput(document.getElementById('fName').value),
+          weight: Number(document.getElementById('fWeight').value),
+          height: Number(document.getElementById('fHeight').value),
+          bio: sanitizeInput(document.getElementById('fBio').value),
+          avatar: imgData.secure_url,
+          approved: false,
+          createdAt: serverTimestamp()
+        });
+
+        status.style.color = "#10b981";
+        status.textContent = "Gửi thành công! Hồ sơ của bạn sẽ hiển thị ngay sau khi Admin CLB kiểm duyệt.";
+        e.target.reset();
+      } catch (err) {
+        status.style.color = "#ef4444";
+        status.textContent = "Có lỗi xảy ra, vui lòng kiểm tra lại kết nối!";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Gửi Hồ Sơ Chờ Duyệt";
+      }
+    });
+
+    loadFighters();
+  </script>
+</body>
+</html>

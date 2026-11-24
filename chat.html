@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phòng Chat Cộng Đồng | Vườn Hoa Boxing Clup</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .btn-del-msg {
+      background: transparent;
+      border: 1px solid #ef4444;
+      color: #ef4444;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn-del-msg:hover {
+      background: #ef4444;
+      color: #fff;
+    }
+    .msg-mine {
+      border-left-color: var(--primary);
+      background: #1b1318;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav-container">
+      <a href="index.html" class="brand"><img src="logo.png" alt="Logo"><div>VƯỜN HOA <span>BOXING CLUP</span></div></a>
+      <nav>
+        <ul>
+          <li><a href="index.html">Trang Chủ</a></li>
+          <li><a href="fighters.html">Võ Sĩ & Hồ Sơ</a></li>
+          <li><a href="sparring.html">Đăng Ký Sparring</a></li>
+          <li><a href="chat.html" class="active">Phòng Chat</a></li>
+          <li><a href="donate.html">Ủng Hộ Thiết Bị</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container" style="max-width: 800px;">
+    <h1 class="page-title">PHÒNG CHAT ANH EM CLB</h1>
+    <p class="page-sub">Trao đổi kỹ thuật, hẹn giờ ra sân và ghép kèo giao lưu văn minh. Bạn có thể tự xóa tin nhắn của chính mình.</p>
+
+    <div class="card">
+      <div id="chatBox" class="chat-box">
+        <p style="color: var(--text-muted);">Đang kết nối phòng chat...</p>
+      </div>
+      <form id="chatForm" style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <input type="text" id="cSender" maxlength="25" required placeholder="Tên của bạn" style="flex: 1; min-width: 140px;">
+        <input type="text" id="cText" maxlength="150" required placeholder="Nhập tin nhắn (tối đa 150 ký tự)..." style="flex: 3; min-width: 220px;">
+        <button type="submit" id="btnSend" class="btn">Gửi</button>
+      </form>
+    </div>
+  </main>
+
+  <script type="module">
+    import { auth, db, sanitizeInput } from './js/firebase-config.js';
+    import { signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { collection, addDoc, deleteDoc, doc, query, orderBy, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const chatBox = document.getElementById('chatBox');
+    const senderInput = document.getElementById('cSender');
+    const btnSend = document.getElementById('btnSend');
+
+    let currentUid = null;
+    let lastSentTime = 0;
+
+    // Ghi nhớ tên người gửi trên trình duyệt cho lần chat sau
+    const savedName = localStorage.getItem("vhb_chat_name");
+    if (savedName) senderInput.value = savedName;
+
+    // Khởi tạo phiên ẩn danh để có UID xác thực quyền xóa tin nhắn của chính mình
+    signInAnonymously(auth).catch((err) => {
+      console.error("Lỗi xác thực phiên:", err);
+    });
+
+    function renderMessages(snapshot) {
+      chatBox.innerHTML = "";
+      if (snapshot.empty) {
+        chatBox.innerHTML = "<p style='color: var(--text-muted);'>Chưa có tin nhắn nào. Hãy mở màn cho buổi tối Thứ 7 nhé!</p>";
+        return;
+      }
+
+      snapshot.forEach(docSnap => {
+        const d = docSnap.data();
+        const isMine = currentUid && d.uid === currentUid;
+
+        const div = document.createElement('div');
+        div.className = isMine ? "msg msg-mine" : "msg";
+
+        const deleteBtnHtml = isMine
+          ? `<button type="button" class="btn-del-msg" data-id="${docSnap.id}">Xóa</button>`
+          : "";
+
+        div.innerHTML = `
+          <div class="msg-header">
+            <span class="msg-sender">${sanitizeInput(d.sender)} ${isMine ? "(Bạn)" : ""}</span>
+            ${deleteBtnHtml}
+          </div>
+          <div>${sanitizeInput(d.text)}</div>
+        `;
+        chatBox.appendChild(div);
+      });
+
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    let latestSnapshot = null;
+
+    const q = query(collection(db, "chats"), orderBy("createdAt", "asc"), limit(50));
+    onSnapshot(q, (snapshot) => {
+      latestSnapshot = snapshot;
+      renderMessages(snapshot);
+    });
+
+    onAuthStateChanged(auth, (user) => {
+      currentUid = user ? user.uid : null;
+      if (latestSnapshot) {
+        renderMessages(latestSnapshot);
+      }
+    });
+
+    // Bắt sự kiện bấm nút Xóa tin nhắn của chính mình
+    chatBox.addEventListener('click', async (e) => {
+      if (!e.target.classList.contains('btn-del-msg')) return;
+      const msgId = e.target.getAttribute('data-id');
+      if (!msgId || !currentUid) return;
+
+      if (!confirm("Bạn muốn xóa tin nhắn này?")) return;
+
+      try {
+        await deleteDoc(doc(db, "chats", msgId));
+      } catch (err) {
+        alert("Không thể xóa tin nhắn này!");
+      }
+    });
+
+    // Gửi tin nhắn (giới hạn 3 giây/tin để chống spam)
+    document.getElementById('chatForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!currentUid) {
+        alert("Đang khởi tạo kết nối bảo mật, vui lòng thử lại sau 1 giây!");
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastSentTime < 3000) {
+        alert("Bạn thao tác hơi nhanh, vui lòng đợi 3 giây giữa các tin nhắn!");
+        return;
+      }
+
+      const sender = sanitizeInput(senderInput.value);
+      const text = sanitizeInput(document.getElementById('cText').value);
+      if (!sender || !text) return;
+
+      lastSentTime = now;
+      localStorage.setItem("vhb_chat_name", sender);
+      document.getElementById('cText').value = "";
+
+      btnSend.disabled = true;
+      try {
+        await addDoc(collection(db, "chats"), {
+          sender,
+          text,
+          uid: currentUid,
+          createdAt: serverTimestamp()
+        });
+      } catch (err) {
+        alert("Gửi tin nhắn thất bại, vui lòng thử lại!");
+      } finally {
+        btnSend.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
